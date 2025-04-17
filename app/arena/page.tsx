@@ -16,7 +16,7 @@ type ModelResult = {
   response: string; // Reasoning from the model
   confidence: string;
   coordinates: { lat: number; lng: number } | null;
-  accuracy: string; // Placeholder
+  // accuracy: string; // Removed placeholder
   processingTime: string; // Placeholder
   error?: string; // Optional error message
 };
@@ -101,7 +101,7 @@ export default function ArenaPage() {
           console.error("API Error for Gemini:", errorMsg);
           newResults[geminiModelId] = { // Store error state
               model: geminiModelId,
-              response: "", confidence: "", coordinates: null, accuracy: "", processingTime: "", // Default values
+              response: "", confidence: "", coordinates: null, processingTime: "", // Default values (accuracy removed)
               error: errorMsg
           };
         } else {
@@ -112,7 +112,7 @@ export default function ArenaPage() {
              response: modelResult.response, // Reasoning
              confidence: modelResult.confidence || "N/A",
              coordinates: modelResult.coordinates,
-             accuracy: modelResult.accuracy || "N/A",
+             // accuracy: modelResult.accuracy || "N/A", // Removed
              processingTime: modelResult.processingTime || "N/A",
           };
         }
@@ -134,7 +134,7 @@ export default function ArenaPage() {
         response: "This appears to be a view of the Wilder sports-field complex in Orinda, California, just east of the Caldecott Tunnel...",
         confidence: "High",
         coordinates: { lat: 37.88, lng: -122.21 },
-        accuracy: "N/A",
+        // accuracy: "N/A", // Removed
         processingTime: "Simulated"
       };
     }
@@ -144,7 +144,7 @@ export default function ArenaPage() {
         response: "This is the Wilder Fields sports complex in Orinda, California. The image shows multiple soccer/sports fields...",
         confidence: "High",
         coordinates: { lat: 37.88, lng: -122.21 },
-        accuracy: "N/A",
+        // accuracy: "N/A", // Removed
         processingTime: "Simulated"
       };
     }
@@ -154,7 +154,7 @@ export default function ArenaPage() {
         response: "The image shows a hillside view overlooking what appears to be a sports complex with several green fields...",
         confidence: "Medium",
         coordinates: { lat: 37.5, lng: -122 }, // Approx dummy
-        accuracy: "N/A",
+        // accuracy: "N/A", // Removed
         processingTime: "Simulated"
       };
     }

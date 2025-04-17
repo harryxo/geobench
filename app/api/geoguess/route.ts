@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
                 lat: parsedResponse.latitude,
                 lng: parsedResponse.longitude,
             },
-            accuracy: "N/A", // Placeholder
+            // accuracy: "N/A", // Removed placeholder
             processingTime: "N/A" // Placeholder
         });
 
