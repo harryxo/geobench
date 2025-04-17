@@ -121,7 +121,7 @@ export default function ArenaPage() {
          const errorMsg = `Fetch Error: ${error instanceof Error ? error.message : String(error)}`;
          newResults[geminiModelId] = { // Store fetch error state
             model: geminiModelId,
-            response: "", confidence: "", coordinates: null, accuracy: "", processingTime: "", // Default values
+            response: "", confidence: "", coordinates: null, processingTime: "", // Default values (accuracy removed)
             error: errorMsg
          };
       }
