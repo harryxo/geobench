@@ -14,7 +14,7 @@ import Navbar from "@/components/navbar"
 type ModelResult = {
   model: string;
   response: string; // Reasoning from the model
-  confidence: string;
+  // confidence: string; // Removed
   coordinates: { lat: number; lng: number } | null;
   // accuracy: string; // Removed placeholder
   processingTime: string; // Placeholder
@@ -101,7 +101,7 @@ export default function ArenaPage() {
           console.error("API Error for Gemini:", errorMsg);
           newResults[geminiModelId] = { // Store error state
               model: geminiModelId,
-              response: "", confidence: "", coordinates: null, processingTime: "", // Default values (accuracy removed)
+              response: "", coordinates: null, processingTime: "", // Default values (accuracy & confidence removed)
               error: errorMsg
           };
         } else {
@@ -110,7 +110,7 @@ export default function ArenaPage() {
            newResults[geminiModelId] = {
              model: modelResult.model || geminiModelId, // Use model from response or fallback
              response: modelResult.response, // Reasoning
-             confidence: modelResult.confidence || "N/A",
+             // confidence: modelResult.confidence || "N/A", // Removed
              coordinates: modelResult.coordinates,
              // accuracy: modelResult.accuracy || "N/A", // Removed
              processingTime: modelResult.processingTime || "N/A",
@@ -121,7 +121,7 @@ export default function ArenaPage() {
          const errorMsg = `Fetch Error: ${error instanceof Error ? error.message : String(error)}`;
          newResults[geminiModelId] = { // Store fetch error state
             model: geminiModelId,
-            response: "", confidence: "", coordinates: null, processingTime: "", // Default values (accuracy removed)
+            response: "", coordinates: null, processingTime: "", // Default values (accuracy & confidence removed)
             error: errorMsg
          };
       }
@@ -132,7 +132,7 @@ export default function ArenaPage() {
       newResults["gpt4o"] = {
         model: "gpt4o",
         response: "This appears to be a view of the Wilder sports-field complex in Orinda, California, just east of the Caldecott Tunnel...",
-        confidence: "High",
+        // confidence: "High", // Removed
         coordinates: { lat: 37.88, lng: -122.21 },
         // accuracy: "N/A", // Removed
         processingTime: "Simulated"
@@ -142,7 +142,7 @@ export default function ArenaPage() {
        newResults["claude"] = {
         model: "claude",
         response: "This is the Wilder Fields sports complex in Orinda, California. The image shows multiple soccer/sports fields...",
-        confidence: "High",
+        // confidence: "High", // Removed
         coordinates: { lat: 37.88, lng: -122.21 },
         // accuracy: "N/A", // Removed
         processingTime: "Simulated"
@@ -152,7 +152,7 @@ export default function ArenaPage() {
        newResults["llava"] = {
         model: "llava",
         response: "The image shows a hillside view overlooking what appears to be a sports complex with several green fields...",
-        confidence: "Medium",
+        // confidence: "Medium", // Removed
         coordinates: { lat: 37.5, lng: -122 }, // Approx dummy
         // accuracy: "N/A", // Removed
         processingTime: "Simulated"
@@ -325,11 +325,7 @@ export default function ArenaPage() {
                                     Coords: {resultData.coordinates.lat.toFixed(4)}, {resultData.coordinates.lng.toFixed(4)}
                                 </p>
                             )}
-                             {resultData.confidence && (
-                                <p className="text-sm text-gray-500">
-                                    Confidence: {resultData.confidence}
-                                </p>
-                            )}
+                             {/* Confidence display removed */}
                              {/* You can add accuracy/processing time here too if available */}
                           </div>
                         )}
