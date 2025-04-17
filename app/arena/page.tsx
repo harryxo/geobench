@@ -22,11 +22,12 @@ type ModelResult = {
 };
 
 
-// Sample model data - Ensure the ID for Gemini matches what you use in runComparison
+// Sample model data - Update Gemini entry for Vertex AI
 const models = [
   { id: "gpt4o", name: "GPT-4o", color: "#10a37f" },
   { id: "claude", name: "Claude 3 Opus", color: "#7c3aed" },
-  { id: "gemini", name: "Gemini 1.5 Pro", color: "#1a73e8" },
+  // --- Update ID and Name for Vertex Gemini ---
+  { id: "vertex-gemini", name: "Vertex Gemini 2.5 Pro", color: "#4285F4" }, // Example Google Blue
   { id: "llava", name: "LLaVA-1.5", color: "#f97316" },
 ]
 
@@ -77,7 +78,8 @@ export default function ArenaPage() {
     // Use Promise.all to run API calls concurrently in the future if needed
     // For now, handle Gemini specifically
 
-    const geminiModelId = "gemini"; // Match the ID in the models array
+    // --- Update the ID to match the models array ---
+    const geminiModelId = "vertex-gemini";
 
     if (selectedModels.includes(geminiModelId)) {
       const formData = new FormData();

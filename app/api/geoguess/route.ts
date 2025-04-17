@@ -1,10 +1,15 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } from "@google/generative-ai";
+import { VertexAI, HarmCategory, HarmBlockThreshold, Part } from '@google-cloud/vertexai';
 import { NextRequest, NextResponse } from "next/server";
 
-const MODEL_NAME = "gemini-1.5-flash"; // Or "gemini-pro-vision", etc.
-const API_KEY = process.env.GOOGLE_API_KEY;
+// --- Configuration from environment variables ---
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+const VERTEXAI_LOCATION = process.env.VERTEXAI_LOCATION;
+// GOOGLE_APPLICATION_CREDENTIALS should be set in the environment for authentication
 
-// Helper function to convert image buffer to Gemini Part
+// --- The specific Vertex AI model you requested ---
+const VERTEX_MODEL_NAME = "gemini-2.5-pro-exp-03-25";
+
+// Helper function to convert image buffer to Vertex AI Part (structure is compatible)
 function fileToGenerativePart(buffer: Buffer, mimeType: string): Part {
   return {
     inlineData: {
@@ -15,15 +20,15 @@ function fileToGenerativePart(buffer: Buffer, mimeType: string): Part {
 }
 
 export async function POST(req: NextRequest) {
-  if (!API_KEY) {
-    return NextResponse.json({ error: "API key not configured" }, { status: 500 });
+  // --- Check for necessary Vertex AI config ---
+  if (!GCP_PROJECT_ID || !VERTEXAI_LOCATION) {
+    return NextResponse.json({ error: "Vertex AI project ID or location not configured in environment variables." }, { status: 500 });
   }
+  // The SDK will implicitly check for GOOGLE_APPLICATION_CREDENTIALS
 
   try {
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
-    // You could also pass the desired model name from the frontend if needed
-    // const modelId = formData.get("modelId") as string | null;
 
     if (!imageFile) {
       return NextResponse.json({ error: "No image file provided" }, { status: 400 });
@@ -32,14 +37,21 @@ export async function POST(req: NextRequest) {
     const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
     const imagePart = fileToGenerativePart(imageBuffer, imageFile.type);
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME }); // Use the selected model
+    // --- Initialize Vertex AI ---
+    const vertex_ai = new VertexAI({ project: GCP_PROJECT_ID, location: VERTEXAI_LOCATION });
+
+    // --- Instantiate the Model ---
+    const generativeModel = vertex_ai.getGenerativeModel({
+      model: VERTEX_MODEL_NAME,
+      // Safety settings and generation config are passed during the generateContent call
+    });
 
     const generationConfig = {
       temperature: 0.4, // Adjust as needed
       topK: 32,
       topP: 1,
       maxOutputTokens: 4096, // Adjust as needed
+      // candidateCount: 1 // Usually default, explicitly set if needed
     };
 
     const safetySettings = [
@@ -65,59 +77,72 @@ export async function POST(req: NextRequest) {
         "confidence": "High"
       }
 
-      If you cannot determine a location, respond with null values for latitude and longitude and explain why in the reasoning.
+      If you cannot determine a location, respond with null values for latitude and longitude and explain why in the reasoning. Ensure the entire output is valid JSON.
     `;
 
-    const parts = [prompt, imagePart];
+    const requestPayload = {
+        contents: [{ role: "user", parts: [ {text: prompt}, imagePart] }], // Combine prompt text and image part
+        generationConfig,
+        safetySettings,
+    };
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig,
-      safetySettings,
-    });
+    // --- Call Vertex AI ---
+    const streamingResp = await generativeModel.generateContentStream(requestPayload);
+    // Aggregate the response from the stream
+    const aggregatedResponse = await streamingResp.response;
 
-    const responseText = result.response.text();
+    // --- Safely access the response text ---
+    const responseText = aggregatedResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    // Attempt to parse the JSON response from the model
+    if (!responseText) {
+        console.error("Vertex AI response missing text content:", JSON.stringify(aggregatedResponse, null, 2));
+        throw new Error("Received no text content from Vertex AI model.");
+    }
+
+    // --- Attempt to parse the JSON response from the model ---
     try {
         const parsedResponse = JSON.parse(responseText);
+
         // Basic validation - check for null/undefined before accessing properties
+        // Use == null to check for both null and undefined
         if (parsedResponse?.latitude == null || parsedResponse?.longitude == null || typeof parsedResponse?.reasoning !== 'string') {
-             throw new Error("Invalid or incomplete JSON structure from model");
+             throw new Error(`Invalid or incomplete JSON structure from model: ${responseText}`);
         }
 
         // TODO: Add more robust validation if needed
 
         return NextResponse.json({
-            model: MODEL_NAME, // Or pass the actual modelId used
+            model: VERTEX_MODEL_NAME, // Identify the model used
             response: parsedResponse.reasoning,
             confidence: parsedResponse.confidence || "N/A", // Handle missing confidence
             coordinates: {
                 lat: parsedResponse.latitude,
                 lng: parsedResponse.longitude,
             },
-            // You might want to calculate accuracy and processing time here or later
             accuracy: "N/A", // Placeholder
-            processingTime: "N/A" // Placeholder - could calculate time taken
+            processingTime: "N/A" // Placeholder
         });
 
     } catch (parseError) {
-        console.error("Failed to parse Gemini response:", responseText, parseError);
-        // Return the raw text if parsing fails, or a structured error
+        console.error("Failed to parse Vertex AI JSON response:", responseText, parseError);
         return NextResponse.json({
-            model: MODEL_NAME,
-            response: `Failed to parse model response: ${responseText}`,
+            model: VERTEX_MODEL_NAME,
+            response: `Failed to parse model response. Raw output: ${responseText}`,
             confidence: "N/A",
             coordinates: null,
             accuracy: "N/A",
             processingTime: "N/A",
-            error: `Failed to parse model response: ${parseError instanceof Error ? parseError.message : String(parseError)}` // Include error detail
-        }, { status: 500 }); // Indicate server-side issue
+            error: `Failed to parse model response: ${parseError instanceof Error ? parseError.message : String(parseError)}`
+        }, { status: 500 });
     }
 
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    console.error("Error calling Vertex AI API:", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: `Failed to get response from model: ${errorMsg}` }, { status: 500 });
+    // Check for specific authentication errors if possible
+    if (errorMsg.includes("Could not load the default credentials")) {
+         return NextResponse.json({ error: `Authentication Error: Could not load GCP credentials. Ensure GOOGLE_APPLICATION_CREDENTIALS is set correctly in .env.local and points to a valid key file. Details: ${errorMsg}` }, { status: 500 });
+    }
+    return NextResponse.json({ error: `Failed to get response from Vertex AI model: ${errorMsg}` }, { status: 500 });
   }
 }
