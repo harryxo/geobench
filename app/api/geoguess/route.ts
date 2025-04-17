@@ -99,14 +99,34 @@ export async function POST(req: NextRequest) {
         throw new Error("Received no text content from Vertex AI model.");
     }
 
-    // --- Attempt to parse the JSON response from the model ---
+    // --- Attempt to parse the JSON response from the model, using regex to strip Markdown fences ---
+    let jsonString = responseText.trim();
+
+    // Regex to find JSON content possibly wrapped in ```json ... ``` or just ``` ... ```
+    // It captures the content between the first '{' and the last '}' greedily.
+    const jsonRegex = /```(?:json)?\s*({[\s\S]*})\s*```|({[\s\S]*})/;
+    const match = jsonString.match(jsonRegex);
+
+    // Prioritize the explicitly captured group within fences (match[1])
+    // Fallback to the second group (match[2]) if the first isn't present (might be raw JSON)
+    const extractedJson = match ? (match[1] || match[2]) : null;
+
+    if (!extractedJson) {
+        // If regex didn't find a JSON structure, throw an error before trying to parse
+         console.error("Could not extract JSON object from model response:", responseText);
+         // Throw the error here so it's caught by the outer catch block
+         throw new Error(`Could not extract JSON object from model response. Raw output: ${responseText}`);
+    }
+
+    // Use the extracted JSON string
+    jsonString = extractedJson.trim();
+
     try {
-        const parsedResponse = JSON.parse(responseText);
+        const parsedResponse = JSON.parse(jsonString);
 
         // Basic validation - check for null/undefined before accessing properties
-        // Use == null to check for both null and undefined
         if (parsedResponse?.latitude == null || parsedResponse?.longitude == null || typeof parsedResponse?.reasoning !== 'string') {
-             throw new Error(`Invalid or incomplete JSON structure from model: ${responseText}`);
+             throw new Error(`Invalid or incomplete JSON structure from model after regex extraction: ${jsonString}`);
         }
 
         // TODO: Add more robust validation if needed
@@ -124,16 +144,10 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (parseError) {
-        console.error("Failed to parse Vertex AI JSON response:", responseText, parseError);
-        return NextResponse.json({
-            model: VERTEX_MODEL_NAME,
-            response: `Failed to parse model response. Raw output: ${responseText}`,
-            confidence: "N/A",
-            coordinates: null,
-            accuracy: "N/A",
-            processingTime: "N/A",
-            error: `Failed to parse model response: ${parseError instanceof Error ? parseError.message : String(parseError)}`
-        }, { status: 500 });
+        console.error("Failed to parse Vertex AI JSON response (after regex extraction):", jsonString, "Original response:", responseText, parseError);
+        // Include the potentially cleaned string and original in the error response for debugging
+        // Throw the error here so it's caught by the outer catch block and includes the original error context
+        throw new Error(`Failed to parse model response: ${parseError instanceof Error ? parseError.message : String(parseError)}. Attempted to parse: ${jsonString}. Raw output: ${responseText}`);
     }
 
   } catch (error) {
