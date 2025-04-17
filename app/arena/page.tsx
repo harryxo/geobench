@@ -10,7 +10,19 @@ import { Upload, MapPin, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Navbar from "@/components/navbar"
 
-// Sample model data
+// Define a type for the result, including potential errors
+type ModelResult = {
+  model: string;
+  response: string; // Reasoning from the model
+  confidence: string;
+  coordinates: { lat: number; lng: number } | null;
+  accuracy: string; // Placeholder
+  processingTime: string; // Placeholder
+  error?: string; // Optional error message
+};
+
+
+// Sample model data - Ensure the ID for Gemini matches what you use in runComparison
 const models = [
   { id: "gpt4o", name: "GPT-4o", color: "#10a37f" },
   { id: "claude", name: "Claude 3 Opus", color: "#7c3aed" },
@@ -20,17 +32,22 @@ const models = [
 
 export default function ArenaPage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  // --- Add state for the File object ---
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<Record<string, string>>({})
-  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt4o", "claude"])
+  // --- Update state type to use ModelResult ---
+  const [results, setResults] = useState<Record<string, ModelResult>>({})
+  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt4o", "claude", "gemini"]) // Include gemini by default maybe
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // --- Store the file object ---
+      setUploadedImageFile(file);
       const reader = new FileReader()
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string)
-        setResults({})
+        setResults({}) // Clear previous results
       }
       reader.readAsDataURL(file)
     }
@@ -38,6 +55,8 @@ export default function ArenaPage() {
 
   const clearImage = () => {
     setUploadedImage(null)
+    // --- Clear the file object too ---
+    setUploadedImageFile(null);
     setResults({})
   }
 
@@ -45,39 +64,102 @@ export default function ArenaPage() {
     setSelectedModels((prev) => (prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]))
   }
 
-  const runComparison = () => {
-    if (!uploadedImage || selectedModels.length === 0) return
+  // --- Make the function async ---
+  const runComparison = async () => {
+    // --- Check for the file object ---
+    if (!uploadedImageFile || selectedModels.length === 0) return
 
     setIsLoading(true)
+    // --- Use the ModelResult type ---
+    const newResults: Record<string, ModelResult> = {}
 
-    // Simulate API calls with timeout
-    setTimeout(() => {
-      const newResults: Record<string, string> = {}
+    // --- Process selected models ---
+    // Use Promise.all to run API calls concurrently in the future if needed
+    // For now, handle Gemini specifically
 
-      // Mock responses for each model
-      if (selectedModels.includes("gpt4o")) {
-        newResults["gpt4o"] =
-          "This appears to be a view of the Wilder sports-field complex in Orinda, California, just east of the Caldecott Tunnel. The bright striped turf pitches belong to the Wilder development. The freeway snaking up the valley is CA-24, heading toward Oakland. The three concrete columns on the opposite ridge are the Caldecott Tunnel ventilation stacks. This location is approximately at 37.88°N, 122.21°W in the East Bay area."
+    const geminiModelId = "gemini"; // Match the ID in the models array
+
+    if (selectedModels.includes(geminiModelId)) {
+      const formData = new FormData();
+      formData.append("image", uploadedImageFile);
+      // Optional: formData.append("modelId", geminiModelId);
+
+      try {
+        const response = await fetch('/api/geoguess', { // Call your API route
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errorMsg = `API Error: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = `API Error: ${errorData.error || response.statusText}`;
+          } catch (e) { /* Ignore if response is not JSON */ }
+          console.error("API Error for Gemini:", errorMsg);
+          newResults[geminiModelId] = { // Store error state
+              model: geminiModelId,
+              response: "", confidence: "", coordinates: null, accuracy: "", processingTime: "", // Default values
+              error: errorMsg
+          };
+        } else {
+          const modelResult = await response.json();
+          // Store successful result, ensure structure matches ModelResult
+           newResults[geminiModelId] = {
+             model: modelResult.model || geminiModelId, // Use model from response or fallback
+             response: modelResult.response, // Reasoning
+             confidence: modelResult.confidence || "N/A",
+             coordinates: modelResult.coordinates,
+             accuracy: modelResult.accuracy || "N/A",
+             processingTime: modelResult.processingTime || "N/A",
+          };
+        }
+      } catch (error) {
+        console.error("Fetch Error for Gemini:", error);
+         const errorMsg = `Fetch Error: ${error instanceof Error ? error.message : String(error)}`;
+         newResults[geminiModelId] = { // Store fetch error state
+            model: geminiModelId,
+            response: "", confidence: "", coordinates: null, accuracy: "", processingTime: "", // Default values
+            error: errorMsg
+         };
       }
+    }
 
-      if (selectedModels.includes("claude")) {
-        newResults["claude"] =
-          "This is the Wilder Fields sports complex in Orinda, California. The image shows multiple soccer/sports fields with distinctive green striping. The location is in the hills east of Oakland, with Highway 24 visible running through the valley. Based on the perspective, this photo was taken from a hillside south of the fields, looking north/northwest. The approximate coordinates are 37.88°N, 122.21°W."
-      }
+    // --- Handle Other Models (Keep Dummy Data for now) ---
+    if (selectedModels.includes("gpt4o") && !newResults["gpt4o"]) {
+      newResults["gpt4o"] = {
+        model: "gpt4o",
+        response: "This appears to be a view of the Wilder sports-field complex in Orinda, California, just east of the Caldecott Tunnel...",
+        confidence: "High",
+        coordinates: { lat: 37.88, lng: -122.21 },
+        accuracy: "N/A",
+        processingTime: "Simulated"
+      };
+    }
+    if (selectedModels.includes("claude") && !newResults["claude"]) {
+       newResults["claude"] = {
+        model: "claude",
+        response: "This is the Wilder Fields sports complex in Orinda, California. The image shows multiple soccer/sports fields...",
+        confidence: "High",
+        coordinates: { lat: 37.88, lng: -122.21 },
+        accuracy: "N/A",
+        processingTime: "Simulated"
+      };
+    }
+     if (selectedModels.includes("llava") && !newResults["llava"]) {
+       newResults["llava"] = {
+        model: "llava",
+        response: "The image shows a hillside view overlooking what appears to be a sports complex with several green fields...",
+        confidence: "Medium",
+        coordinates: { lat: 37.5, lng: -122 }, // Approx dummy
+        accuracy: "N/A",
+        processingTime: "Simulated"
+      };
+    }
+    // Add other dummy models if needed...
 
-      if (selectedModels.includes("gemini")) {
-        newResults["gemini"] =
-          "This appears to be the Robert Sibley Volcanic Regional Preserve or nearby area in the Oakland Hills, California. I can see what looks like sports fields in a valley with hills surrounding them. This is likely in the East Bay region near Berkeley/Oakland. The approximate coordinates would be around 37.8°N, 122.2°W."
-      }
-
-      if (selectedModels.includes("llava")) {
-        newResults["llava"] =
-          "The image shows a hillside view overlooking what appears to be a sports complex with several green fields. This looks like it could be in California based on the dry golden hills and the layout. I can see what might be a highway or road in the valley. Without more specific landmarks, I would estimate this is somewhere in the western United States, possibly in California near a suburban area. The coordinates might be approximately 37-38°N, 122°W."
-      }
-
-      setResults(newResults)
-      setIsLoading(false)
-    }, 3000)
+    setResults(newResults);
+    setIsLoading(false);
   }
 
   return (
@@ -149,7 +231,8 @@ export default function ArenaPage() {
 
                     <Button
                       onClick={runComparison}
-                      disabled={isLoading || selectedModels.length === 0}
+                      // --- Disable button if no file is selected ---
+                      disabled={isLoading || selectedModels.length === 0 || !uploadedImageFile}
                       className="w-full bg-emerald-500 hover:bg-emerald-600"
                     >
                       {isLoading ? (
@@ -192,16 +275,18 @@ export default function ArenaPage() {
                     )}
                   </div>
                 ) : (
-                  <Tabs defaultValue={Object.keys(results)[0]} className="w-full">
+                  <Tabs defaultValue={selectedModels.find(id => results[id]) || Object.keys(results)[0]} className="w-full">
                     <TabsList className="mb-4 flex flex-wrap">
-                      {Object.keys(results).map((modelId) => {
+                      {/* Filter results to only show tabs for models that were actually selected for the run */}
+                      {selectedModels.filter(id => results[id]).map((modelId) => {
                         const model = models.find((m) => m.id === modelId)
                         return (
                           <TabsTrigger
                             key={modelId}
                             value={modelId}
-                            className="mr-2 mb-2"
+                            className="mr-2 mb-2 data-[state=active]:shadow-md" // Added active state style
                             style={{
+                              // Use Radix state for active styling if preferred over direct style manipulation
                               borderColor: model?.color,
                               color: model?.color,
                             }}
@@ -212,18 +297,40 @@ export default function ArenaPage() {
                       })}
                     </TabsList>
 
-                    {Object.entries(results).map(([modelId, response]) => (
+                    {/* Map over the actual results received */}
+                    {Object.entries(results).map(([modelId, resultData]) => (
                       <TabsContent key={modelId} value={modelId} className="border rounded-lg p-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center">
-                            <div
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: models.find((m) => m.id === modelId)?.color }}
-                            ></div>
-                            <h3 className="font-medium">{models.find((m) => m.id === modelId)?.name}</h3>
+                        {/* --- Check for error property --- */}
+                        {resultData.error ? (
+                          <div className="text-red-600">
+                            <h3 className="font-medium mb-2">{models.find((m) => m.id === modelId)?.name} Error</h3>
+                            <p>{resultData.error}</p>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-line">{response}</p>
-                        </div>
+                        ) : (
+                          // Original rendering logic for successful response
+                          <div className="space-y-2">
+                            <div className="flex items-center">
+                              <div
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: models.find((m) => m.id === modelId)?.color }}
+                              ></div>
+                              <h3 className="font-medium">{models.find((m) => m.id === modelId)?.name}</h3>
+                            </div>
+                            <p className="text-gray-700 whitespace-pre-line">{resultData.response}</p>
+                            {/* Optionally display coordinates, confidence etc. */}
+                            {resultData.coordinates && (
+                                <p className="text-sm text-gray-500">
+                                    Coords: {resultData.coordinates.lat.toFixed(4)}, {resultData.coordinates.lng.toFixed(4)}
+                                </p>
+                            )}
+                             {resultData.confidence && (
+                                <p className="text-sm text-gray-500">
+                                    Confidence: {resultData.confidence}
+                                </p>
+                            )}
+                             {/* You can add accuracy/processing time here too if available */}
+                          </div>
+                        )}
                       </TabsContent>
                     ))}
                   </Tabs>
