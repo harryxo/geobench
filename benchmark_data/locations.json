@@ -1,18 +1,18 @@
 [
   {
     "name": "Eiffel Tower, Paris",
-    "latitude": 48.8584,
-    "longitude": 2.2945,
-    "heading": 235,
-    "pitch": 0,
+    "latitude": 48.8578534,
+    "longitude": 2.2952774,
+    "heading": 303.31,
+    "pitch": 140.62, // Note: This pitch seems very high (looking almost straight up). Verify if this is intended.
     "zoom": 0,
-    "panoId": null,
+    "panoId": null, // Keep this null as 'extra.panoId' is used
     "countryCode": "FR",
     "stateCode": null,
     "extra": {
       "tags": [],
-      "panoId": "CAoSLEFGMVFpcE01Q215eW1fN3h0X1JwNXp2RkVEdk9hV1NlUkhvRjFQbXZ4dUVl",
-      "panoDate": "2023-09"
+      "panoId": "U6mYhRRXwjrkwy0-8LETsA", // The new Pano ID
+      "panoDate": "Unknown"
     },
     "description": "Eiffel Tower view from Champ de Mars (Example - Replace with your actual data)"
   },
