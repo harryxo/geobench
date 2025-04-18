@@ -4,14 +4,14 @@
     "latitude": 48.8578534,
     "longitude": 2.2952774,
     "heading": 303.31,
-    "pitch": 140.62, // Note: This pitch seems very high (looking almost straight up). Verify if this is intended.
+    "pitch": 140.62, 
     "zoom": 0,
-    "panoId": null, // Keep this null as 'extra.panoId' is used
+    "panoId": null, 
     "countryCode": "FR",
     "stateCode": null,
     "extra": {
       "tags": [],
-      "panoId": "U6mYhRRXwjrkwy0-8LETsA", // The new Pano ID
+      "panoId": "U6mYhRRXwjrkwy0-8LETsA", 
       "panoDate": "Unknown"
     },
     "description": "Eiffel Tower view from Champ de Mars (Example - Replace with your actual data)"
