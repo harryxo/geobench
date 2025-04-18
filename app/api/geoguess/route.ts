@@ -38,24 +38,27 @@ export async function POST(req: NextRequest) {
     const imagePart = fileToGenerativePart(imageBuffer, imageFile.type);
 
     // --- Initialize Vertex AI ---
-    const clientEmail = process.env.GCP_CLIENT_EMAIL;
-    const privateKey = process.env.GCP_PRIVATE_KEY?.replace(/\\n/g, '\n'); // Replace literal '\n' with actual newline
-    const projectId = process.env.GCP_PROJECT_ID; // Use the same project ID variable
+    const projectId = process.env.GCP_PROJECT_ID;
     const location = process.env.VERTEXAI_LOCATION;
+    const clientEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL; // Use the documented name
+    const privateKey = process.env.GCP_PRIVATE_KEY; // Use the raw value
 
     let vertexAIConfig: { project: string; location: string; credentials?: any } = {
       project: projectId!,
       location: location!,
     };
 
+    // Check if the specific Vercel integration/standard variables are present
     if (clientEmail && privateKey) {
       vertexAIConfig.credentials = {
         client_email: clientEmail,
-        private_key: privateKey,
+        private_key: privateKey, // Pass the raw key
       };
-      console.log("Using credentials constructed from GCP_CLIENT_EMAIL and GCP_PRIVATE_KEY environment variables.");
+      console.log("Using credentials constructed from GCP_SERVICE_ACCOUNT_EMAIL and GCP_PRIVATE_KEY environment variables.");
     } else {
-      console.warn("GCP_CLIENT_EMAIL or GCP_PRIVATE_KEY environment variable not found. Falling back to default credential discovery (may not work on Vercel).");
+      // Log a warning if the specific variables aren't found.
+      // The SDK might still attempt ADC, but it's unlikely to work on Vercel without the integration/manual setup.
+      console.warn("GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found. SDK will attempt default credential discovery (may not work on Vercel).");
     }
 
     const vertex_ai = new VertexAI(vertexAIConfig);
