@@ -10,19 +10,7 @@ export default function AboutPage() {
         <h1 className="text-3xl font-bold mb-6">About GeoGuesser Benchmark</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Our Mission</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700">
-                The GeoGuesser Benchmark aims to evaluate and compare the geographic reasoning capabilities of
-                multimodal AI models. By providing a standardized set of location images and metrics, we enable
-                researchers and developers to better understand the strengths and limitations of different models in
-                identifying real-world locations.
-              </p>
-            </CardContent>
-          </Card>
+          {/* "Our Mission" Card Removed */}
 
           <Card>
             <CardHeader>
@@ -81,22 +69,7 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Us</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 mb-4">
-              Have questions or suggestions about the GeoGuesser Benchmark? We'd love to hear from you.
-            </p>
-            <p className="text-gray-700">
-              Email:{" "}
-              <a href="mailto:contact@geoguessrbenchmark.ai" className="text-emerald-600 hover:underline">
-                contact@geoguessrbenchmark.ai
-              </a>
-            </p>
-          </CardContent>
-        </Card>
+        {/* "Contact Us" Card Removed */}
       </main>
     </div>
   )
