@@ -49,13 +49,13 @@ export async function POST(req: NextRequest) {
 
     // Check if the specific Vercel integration/standard variables are present
     if (projectId && clientEmail && privateKey) {
-      // Structure matching the Vercel helper function example output
-      vertexAIConfig.projectId = projectId; // Add projectId here
+      // Use 'project' key as suggested by the error message
+      vertexAIConfig.project = projectId; // Use 'project' instead of 'projectId'
       vertexAIConfig.credentials = {
         client_email: clientEmail,
         private_key: privateKey, // Pass the raw key
       };
-      console.log("Using credentials object (with projectId) constructed from GCP environment variables.");
+      console.log("Using credentials object (with project key) constructed from GCP environment variables."); // Updated log message
     } else {
       // Log a warning if the specific variables aren't found.
       console.warn("GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found via integration. SDK will attempt default credential discovery (may not work on Vercel).");
