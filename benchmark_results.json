@@ -1,0 +1,54 @@
+[
+  {
+    "name": "Eiffel Tower, Paris",
+    "latitude": 48.8604215,
+    "longitude": 2.2912028,
+    "heading": 142.17,
+    "pitch": 0,
+    "zoom": 0,
+    "panoId": null,
+    "countryCode": "FR",
+    "stateCode": null,
+    "extra": {
+      "tags": [],
+      "panoId": "53TFTncwgejb9XYmwIh__g",
+      "panoDate": "Unknown"
+    },
+    "description": "Eiffel Tower view from perspective point (Example - Replace with your actual data)",
+    "predicted": {
+      "latitude": 48.860548,
+      "longitude": 2.291838,
+      "reasoning": "The image shows a clear view of the Eiffel Tower from the Pont d'Iéna bridge in Paris, France. The specific viewpoint is identifiable from the bridge structure, cobblestones, lamp posts, and the angle towards the tower.",
+      "confidence": "High"
+    },
+    "distanceKm": 0.04860447802118147,
+    "isCorrect": true,
+    "processingTimeMs": 7525
+  },
+  {
+    "name": "Christ the Redeemer, Rio",
+    "latitude": -22.9518499,
+    "longitude": -43.2100847,
+    "heading": 263.07,
+    "pitch": 0,
+    "zoom": 0,
+    "panoId": null,
+    "countryCode": "BR",
+    "stateCode": "RJ",
+    "extra": {
+      "tags": [],
+      "panoId": "g8s2ULR0xMqNJCiEyHE3hg",
+      "panoDate": "Unknown"
+    },
+    "description": "View towards Christ the Redeemer (Example - Replace with your actual data)",
+    "predicted": {
+      "latitude": -22.951916,
+      "longitude": -43.210487,
+      "reasoning": "The image shows the iconic Christ the Redeemer statue, located on Corcovado Mountain in Rio de Janeiro, Brazil. The viewpoint is from the base of the statue, looking up.",
+      "confidence": "High"
+    },
+    "distanceKm": 0.04188973878086081,
+    "isCorrect": true,
+    "processingTimeMs": 4055
+  }
+]
