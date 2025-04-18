@@ -1,20 +1,20 @@
 [
   {
     "name": "Eiffel Tower, Paris",
-    "latitude": 48.8578534,
-    "longitude": 2.2952774,
-    "heading": 303.31,
-    "pitch": 140.62, 
+    "latitude": 48.8604215,
+    "longitude": 2.2912028,
+    "heading": 142.17,
+    "pitch": 84.12,
     "zoom": 0,
-    "panoId": null, 
+    "panoId": null,
     "countryCode": "FR",
     "stateCode": null,
     "extra": {
       "tags": [],
-      "panoId": "U6mYhRRXwjrkwy0-8LETsA", 
+      "panoId": "53TFTncwgejb9XYmwIh__g",
       "panoDate": "Unknown"
     },
-    "description": "Eiffel Tower view from Champ de Mars (Example - Replace with your actual data)"
+    "description": "Eiffel Tower view from perspective point (Example - Replace with your actual data)"
   },
   {
     "name": "Christ the Redeemer, Rio",
