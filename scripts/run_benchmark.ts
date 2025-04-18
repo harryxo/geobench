@@ -1,6 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { VertexAI, HarmCategory, HarmBlockThreshold, Part } from '@google-cloud/vertexai';
+// Adjust import for CommonJS compatibility with @google-cloud/vertexai
+import pkg from '@google-cloud/vertexai';
+const { VertexAI, HarmCategory, HarmBlockThreshold } = pkg;
+type Part = pkg.Part; // Explicitly type Part
+
 // @ts-ignore - If @types/haversine-distance install fails again, uncomment this. Otherwise, remove it.
 import haversine from 'haversine-distance';
 
