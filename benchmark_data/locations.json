@@ -1,0 +1,14 @@
+[
+  {
+    "filename": "image_01.jpg",
+    "latitude": 48.8584,
+    "longitude": 2.2945,
+    "description": "Eiffel Tower, Paris (Example - Replace with your actual data)"
+  },
+  {
+    "filename": "image_02.png",
+    "latitude": -22.9519,
+    "longitude": -43.2105,
+    "description": "Christ the Redeemer, Rio (Example - Replace with your actual data)"
+  }
+]

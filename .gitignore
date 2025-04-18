@@ -18,6 +18,7 @@ yarn-error.log*
 
 # env files
 .env*
+.env.*.local
 
 # vercel
 .vercel
@@ -25,4 +26,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# benchmark results
+benchmark_results.json
+
+# aider internal files
 .aider*
