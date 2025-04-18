@@ -40,31 +40,32 @@ export async function POST(req: NextRequest) {
     // --- Initialize Vertex AI ---
     const projectId = process.env.GCP_PROJECT_ID;
     const location = process.env.VERTEXAI_LOCATION;
-    const clientEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL; // Use the documented name
-    const privateKey = process.env.GCP_PRIVATE_KEY; // Use the raw value
+    const clientEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GCP_PRIVATE_KEY;
 
-    let vertexAIConfig: { projectId?: string; project?: string; location?: string; credentials?: any } = {
-      location: location!, // Keep location separate as per VertexAI constructor options
+    // Base config with project and location are mandatory for VertexAI constructor
+    let vertexAIConfig: { project: string; location: string; googleAuthOptions?: any } = {
+        project: projectId!,
+        location: location!,
     };
 
-    // Check if the specific Vercel integration/standard variables are present
-    if (projectId && clientEmail && privateKey) {
-      // Use 'project' key as suggested by the error message
-      vertexAIConfig.project = projectId; // Use 'project' instead of 'projectId'
-      vertexAIConfig.credentials = {
-        client_email: clientEmail,
-        private_key: privateKey, // Pass the raw key
-      };
-      console.log("Using credentials object (with project key) constructed from GCP environment variables."); // Updated log message
+    // If Vercel integration variables are present, add them via googleAuthOptions
+    if (clientEmail && privateKey) {
+        vertexAIConfig.googleAuthOptions = {
+            credentials: {
+                client_email: clientEmail,
+                // IMPORTANT: Replace literal '\n' stored by Vercel with actual newlines
+                private_key: privateKey.replace(/\\n/g, '\n'),
+            }
+        };
+        console.log("Using credentials object nested under googleAuthOptions.");
     } else {
-      // Log a warning if the specific variables aren't found.
-      console.warn("GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found via integration. SDK will attempt default credential discovery (may not work on Vercel).");
-      // Pass project/location directly if using ADC fallback
-      vertexAIConfig = { project: projectId!, location: location! };
+        // Log a warning if the specific variables aren't found.
+        console.warn("GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found via integration. SDK will attempt default credential discovery (may not work on Vercel).");
+        // No need to modify vertexAIConfig here, it already has project/location for ADC fallback attempt
     }
 
-    // Pass the potentially modified config object directly
-    // The VertexAI constructor should pick up projectId/credentials or project/location
+    // Initialize VertexAI with the potentially augmented config
     const vertex_ai = new VertexAI(vertexAIConfig);
 
     // --- Instantiate the Model ---
