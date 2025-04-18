@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url'; // Import necessary function for ESM __dirname equivalent
 // Adjust import for CommonJS compatibility with @google-cloud/vertexai
 import pkg from '@google-cloud/vertexai';
 const { VertexAI, HarmCategory, HarmBlockThreshold } = pkg;
@@ -9,6 +10,10 @@ type Part = pkg.Part; // Explicitly type Part
 import haversine from 'haversine-distance';
 
 // --- Configuration ---
+// Get the directory name in ES module scope
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Ensure these are set in your environment (e.g., .env.local or export)
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
 const VERTEXAI_LOCATION = process.env.VERTEXAI_LOCATION;
