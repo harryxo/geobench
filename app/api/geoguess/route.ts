@@ -38,7 +38,33 @@ export async function POST(req: NextRequest) {
     const imagePart = fileToGenerativePart(imageBuffer, imageFile.type);
 
     // --- Initialize Vertex AI ---
-    const vertex_ai = new VertexAI({ project: GCP_PROJECT_ID, location: VERTEXAI_LOCATION });
+    let vertexAIConfig: { project: string; location: string; credentials?: any } = {
+      project: GCP_PROJECT_ID!, // Add non-null assertion as we checked earlier
+      location: VERTEXAI_LOCATION!, // Add non-null assertion
+    };
+
+    // Try to load credentials from the environment variable containing the JSON content
+    const serviceAccountJsonString = process.env.GCP_SERVICE_ACCOUNT_JSON;
+    if (serviceAccountJsonString) {
+      try {
+        const credentials = JSON.parse(serviceAccountJsonString);
+        vertexAIConfig.credentials = credentials;
+        console.log("Successfully parsed credentials from GCP_SERVICE_ACCOUNT_JSON environment variable."); // Log success
+      } catch (e) {
+        console.error("Failed to parse GCP_SERVICE_ACCOUNT_JSON. Ensure it's valid JSON.", e);
+        // Allow falling back to default ADC (Application Default Credentials) if parsing fails,
+        // though this might not work reliably on Vercel without further setup.
+        // Log a warning instead of throwing an error immediately.
+         console.warn("Falling back to default credential discovery (may not work on Vercel).");
+      }
+    } else {
+       console.warn("GCP_SERVICE_ACCOUNT_JSON environment variable not found. Falling back to default credential discovery (may not work on Vercel).");
+       // If running locally and GOOGLE_APPLICATION_CREDENTIALS is set, it *might* still work,
+       // but this setup prioritizes the JSON content variable for Vercel.
+    }
+
+
+    const vertex_ai = new VertexAI(vertexAIConfig);
 
     // --- Instantiate the Model ---
     const generativeModel = vertex_ai.getGenerativeModel({

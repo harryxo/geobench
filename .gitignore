@@ -28,7 +28,7 @@ yarn-error.log*
 next-env.d.ts
 
 # benchmark results
-benchmark_results.json
+# benchmark_results.json # Removed for Vercel deployment (Option 1)
 
 # aider internal files
 .aider*
