@@ -18,9 +18,9 @@
   },
   {
     "name": "Christ the Redeemer, Rio",
-    "latitude": -22.9519,
-    "longitude": -43.2105,
-    "heading": 90,
+    "latitude": -22.9518499,
+    "longitude": -43.2100847,
+    "heading": 263.07,
     "pitch": 0,
     "zoom": 0,
     "panoId": null,
@@ -28,8 +28,8 @@
     "stateCode": "RJ",
     "extra": {
       "tags": [],
-      "panoId": "CAoSLEFGMVFpcE1mRmVSOGdBU0Q5R2QyVndCWDl5TExqbk10RWpTN1lwOWp4WEFN",
-      "panoDate": "2023-05"
+      "panoId": "g8s2ULR0xMqNJCiEyHE3hg",
+      "panoDate": "Unknown"
     },
     "description": "View towards Christ the Redeemer (Example - Replace with your actual data)"
   }
