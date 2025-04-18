@@ -39,34 +39,22 @@ export async function POST(req: NextRequest) {
 
     // --- Initialize Vertex AI ---
     const projectId = process.env.GCP_PROJECT_ID;
+    // Use the location variable name consistent with our setup
     const location = process.env.VERTEXAI_LOCATION;
-    const clientEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = process.env.GCP_PRIVATE_KEY;
 
-    // Base config with project and location are mandatory for VertexAI constructor
-    let vertexAIConfig: { project: string; location: string; googleAuthOptions?: any } = {
+    // Declare getGCPCredentials for TypeScript - assume it's globally available
+    // If this causes build errors, we might need a different approach, but let's try first.
+    declare function getGCPCredentials(): any;
+
+    console.log("Attempting to initialize Vertex AI using Vercel's getGCPCredentials().");
+
+    // Initialize VertexAI exactly as per Vercel's Vertex AI documentation
+    const vertex_ai = new VertexAI({
         project: projectId!,
         location: location!,
-    };
-
-    // If Vercel integration variables are present, add them via googleAuthOptions
-    if (clientEmail && privateKey) {
-        vertexAIConfig.googleAuthOptions = {
-            credentials: {
-                client_email: clientEmail,
-                // IMPORTANT: Replace literal '\n' stored by Vercel with actual newlines
-                private_key: privateKey.replace(/\\n/g, '\n'),
-            }
-        };
-        console.log("Using credentials object nested under googleAuthOptions.");
-    } else {
-        // Log a warning if the specific variables aren't found.
-        console.warn("GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found via integration. SDK will attempt default credential discovery (may not work on Vercel).");
-        // No need to modify vertexAIConfig here, it already has project/location for ADC fallback attempt
-    }
-
-    // Initialize VertexAI with the potentially augmented config
-    const vertex_ai = new VertexAI(vertexAIConfig);
+        // Pass the result of the helper function directly
+        googleAuthOptions: getGCPCredentials()
+    });
 
     // --- Instantiate the Model ---
     const generativeModel = vertex_ai.getGenerativeModel({
