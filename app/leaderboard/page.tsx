@@ -11,7 +11,7 @@ const leaderboardData = [
     organization: "OpenAI",
     accuracy: 89.7,
     avgDistance: 42.3,
-    detailScore: 8.9,
+    // detailScore: 8.9, // Removed
     totalScore: 92.4,
   },
   {
@@ -20,7 +20,7 @@ const leaderboardData = [
     organization: "Anthropic",
     accuracy: 87.2,
     avgDistance: 51.6,
-    detailScore: 9.1,
+    // detailScore: 9.1, // Removed
     totalScore: 90.8,
   },
   {
@@ -29,7 +29,7 @@ const leaderboardData = [
     organization: "Google",
     accuracy: 85.9,
     avgDistance: 58.4,
-    detailScore: 8.7,
+    // detailScore: 8.7, // Removed
     totalScore: 88.3,
   },
   {
@@ -38,7 +38,7 @@ const leaderboardData = [
     organization: "Anthropic",
     accuracy: 82.3,
     avgDistance: 67.2,
-    detailScore: 8.5,
+    // detailScore: 8.5, // Removed
     totalScore: 84.6,
   },
   {
@@ -47,7 +47,7 @@ const leaderboardData = [
     organization: "LLaVA Team",
     accuracy: 79.8,
     avgDistance: 72.5,
-    detailScore: 7.9,
+    // detailScore: 7.9, // Removed
     totalScore: 81.2,
   },
   {
@@ -56,7 +56,7 @@ const leaderboardData = [
     organization: "THUDM",
     accuracy: 77.4,
     avgDistance: 81.3,
-    detailScore: 7.6,
+    // detailScore: 7.6, // Removed
     totalScore: 78.9,
   },
   {
@@ -65,7 +65,7 @@ const leaderboardData = [
     organization: "Alibaba",
     accuracy: 75.1,
     avgDistance: 89.7,
-    detailScore: 7.4,
+    // detailScore: 7.4, // Removed
     totalScore: 76.3,
   },
   {
@@ -74,7 +74,7 @@ const leaderboardData = [
     organization: "Salesforce",
     accuracy: 68.5,
     avgDistance: 112.4,
-    detailScore: 6.8,
+    // detailScore: 6.8, // Removed
     totalScore: 70.2,
   },
   {
@@ -83,7 +83,7 @@ const leaderboardData = [
     organization: "Adept",
     accuracy: 65.3,
     avgDistance: 124.8,
-    detailScore: 6.5,
+    // detailScore: 6.5, // Removed
     totalScore: 67.1,
   },
   {
@@ -92,7 +92,7 @@ const leaderboardData = [
     organization: "Hugging Face",
     accuracy: 62.7,
     avgDistance: 138.2,
-    detailScore: 6.2,
+    // detailScore: 6.2, // Removed
     totalScore: 64.5,
   },
 ]
@@ -118,7 +118,7 @@ export default function LeaderboardPage() {
             <TabsTrigger value="overall">Overall Performance</TabsTrigger>
             <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
             <TabsTrigger value="distance">Distance Error</TabsTrigger>
-            <TabsTrigger value="detail">Detail Score</TabsTrigger>
+            {/* <TabsTrigger value="detail">Detail Score</TabsTrigger> */} {/* Removed */}
           </TabsList>
 
           <TabsContent value="overall">
@@ -136,7 +136,7 @@ export default function LeaderboardPage() {
                         <th className="py-4 px-2 text-left">Organization</th>
                         <th className="py-4 px-2 text-right">Accuracy (%)</th>
                         <th className="py-4 px-2 text-right">Avg. Distance (km)</th>
-                        <th className="py-4 px-2 text-right">Detail Score</th>
+                        {/* <th className="py-4 px-2 text-right">Detail Score</th> */} {/* Removed */}
                         <th className="py-4 px-2 text-right">Total Score</th>
                       </tr>
                     </thead>
@@ -165,7 +165,7 @@ export default function LeaderboardPage() {
                           <td className="py-4 px-2 text-gray-600">{item.organization}</td>
                           <td className="py-4 px-2 text-right">{item.accuracy.toFixed(1)}</td>
                           <td className="py-4 px-2 text-right">{item.avgDistance.toFixed(1)}</td>
-                          <td className="py-4 px-2 text-right">{item.detailScore.toFixed(1)}/10</td>
+                          {/* <td className="py-4 px-2 text-right">{item.detailScore.toFixed(1)}/10</td> */} {/* Removed */}
                           <td className="py-4 px-2 text-right font-bold">{item.totalScore.toFixed(1)}</td>
                         </tr>
                       ))}
@@ -200,7 +200,7 @@ export default function LeaderboardPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="detail">
+          {/* <TabsContent value="detail">
             <Card>
               <CardHeader>
                 <CardTitle>Detail Score Ranking</CardTitle>
@@ -209,7 +209,7 @@ export default function LeaderboardPage() {
                 <p className="text-gray-600 mb-4">Models ranked by quality and specificity of location descriptions.</p>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */} {/* Removed */}
         </Tabs>
       </main>
     </div>
