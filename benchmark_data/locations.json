@@ -1,14 +1,36 @@
 [
   {
-    "filename": "image_01.jpg",
+    "name": "Eiffel Tower, Paris",
     "latitude": 48.8584,
     "longitude": 2.2945,
-    "description": "Eiffel Tower, Paris (Example - Replace with your actual data)"
+    "heading": 235,
+    "pitch": 0,
+    "zoom": 0,
+    "panoId": null,
+    "countryCode": "FR",
+    "stateCode": null,
+    "extra": {
+      "tags": [],
+      "panoId": "CAoSLEFGMVFpcE01Q215eW1fN3h0X1JwNXp2RkVEdk9hV1NlUkhvRjFQbXZ4dUVl",
+      "panoDate": "2023-09"
+    },
+    "description": "Eiffel Tower view from Champ de Mars (Example - Replace with your actual data)"
   },
   {
-    "filename": "image_02.png",
+    "name": "Christ the Redeemer, Rio",
     "latitude": -22.9519,
     "longitude": -43.2105,
-    "description": "Christ the Redeemer, Rio (Example - Replace with your actual data)"
+    "heading": 90,
+    "pitch": 0,
+    "zoom": 0,
+    "panoId": null,
+    "countryCode": "BR",
+    "stateCode": "RJ",
+    "extra": {
+      "tags": [],
+      "panoId": "CAoSLEFGMVFpcE1mRmVSOGdBU0Q5R2QyVndCWDl5TExqbk10RWpTN1lwOWp4WEFN",
+      "panoDate": "2023-05"
+    },
+    "description": "View towards Christ the Redeemer (Example - Replace with your actual data)"
   }
 ]
