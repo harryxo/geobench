@@ -43,24 +43,28 @@ export async function POST(req: NextRequest) {
     const clientEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL; // Use the documented name
     const privateKey = process.env.GCP_PRIVATE_KEY; // Use the raw value
 
-    let vertexAIConfig: { project: string; location: string; credentials?: any } = {
-      project: projectId!,
-      location: location!,
+    let vertexAIConfig: { projectId?: string; project?: string; location?: string; credentials?: any } = {
+      location: location!, // Keep location separate as per VertexAI constructor options
     };
 
     // Check if the specific Vercel integration/standard variables are present
-    if (clientEmail && privateKey) {
+    if (projectId && clientEmail && privateKey) {
+      // Structure matching the Vercel helper function example output
+      vertexAIConfig.projectId = projectId; // Add projectId here
       vertexAIConfig.credentials = {
         client_email: clientEmail,
         private_key: privateKey, // Pass the raw key
       };
-      console.log("Using credentials constructed from GCP_SERVICE_ACCOUNT_EMAIL and GCP_PRIVATE_KEY environment variables.");
+      console.log("Using credentials object (with projectId) constructed from GCP environment variables.");
     } else {
       // Log a warning if the specific variables aren't found.
-      // The SDK might still attempt ADC, but it's unlikely to work on Vercel without the integration/manual setup.
-      console.warn("GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found. SDK will attempt default credential discovery (may not work on Vercel).");
+      console.warn("GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL or GCP_PRIVATE_KEY environment variable not found via integration. SDK will attempt default credential discovery (may not work on Vercel).");
+      // Pass project/location directly if using ADC fallback
+      vertexAIConfig = { project: projectId!, location: location! };
     }
 
+    // Pass the potentially modified config object directly
+    // The VertexAI constructor should pick up projectId/credentials or project/location
     const vertex_ai = new VertexAI(vertexAIConfig);
 
     // --- Instantiate the Model ---
