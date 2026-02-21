@@ -1,8 +1,5 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -10,123 +7,32 @@ import { Upload, MapPin, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Navbar from "@/components/navbar"
 import { ARENA_MODELS, DEFAULT_SELECTED_MODEL_IDS } from "@/lib/arena-config"
-
-// Define a type for the result, including potential errors
-type ModelResult = {
-  model: string;
-  response: string;
-  coordinates: { lat: number; lng: number } | null;
-  processingTime: string;
-  error?: string;
-};
+import { useImageUpload } from "@/hooks/use-image-upload"
+import { useModelSelection } from "@/hooks/use-model-selection"
+import { useModelComparison } from "@/hooks/use-model-comparison"
 
 export default function ArenaPage() {
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<Record<string, ModelResult>>({})
-  const [selectedModels, setSelectedModels] = useState<string[]>(DEFAULT_SELECTED_MODEL_IDS)
+  const { uploadedImage, uploadedImageFile, handleImageUpload, clearImage } = useImageUpload()
+  const { selectedModels, toggleModelSelection } = useModelSelection(DEFAULT_SELECTED_MODEL_IDS)
+  const { isLoading, results, setResults, runComparison } = useModelComparison()
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setUploadedImageFile(file);
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setUploadedImage(event.target?.result as string)
-        setResults({}) // Clear previous results
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const clearImage = () => {
-    setUploadedImage(null)
-    setUploadedImageFile(null);
+  const handleClearImage = () => {
+    clearImage()
     setResults({})
   }
 
-  const toggleModelSelection = (modelId: string) => {
-    setSelectedModels((prev) => (prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]))
+  const handleArenaImageUpload: typeof handleImageUpload = (e) => {
+    handleImageUpload(e)
+    setResults({})
   }
 
-  const runComparison = async () => {
+  const runComparisonHandler = async () => {
     if (!uploadedImageFile || selectedModels.length === 0) return
-
-    setIsLoading(true)
-    const newResults: Record<string, ModelResult> = {}
-    try {
-      const selectedModelConfigs = ARENA_MODELS.filter((model) => selectedModels.includes(model.id));
-
-      const settledResults = await Promise.all(
-        selectedModelConfigs.map(async (modelConfig) => {
-          const formData = new FormData();
-          formData.append("image", uploadedImageFile);
-          formData.append("provider", modelConfig.provider);
-          formData.append("model", modelConfig.model);
-
-          try {
-            const response = await fetch("/api/geoguess", {
-              method: "POST",
-              body: formData,
-            });
-
-            if (!response.ok) {
-              let errorMsg = `API Error: ${response.statusText}`;
-              try {
-                const errorData = await response.json();
-                errorMsg = `API Error: ${errorData.error || response.statusText}`;
-              } catch {
-                // Keep fallback status text
-              }
-
-              return [
-                modelConfig.id,
-                {
-                  model: modelConfig.model,
-                  response: "",
-                  coordinates: null,
-                  processingTime: "",
-                  error: errorMsg,
-                } satisfies ModelResult,
-              ] as const;
-            }
-
-            const modelResult = await response.json();
-            return [
-              modelConfig.id,
-              {
-                model: modelResult.model || modelConfig.model,
-                response: modelResult.response || "",
-                coordinates: modelResult.coordinates ?? null,
-                processingTime:
-                  modelResult.processingTime ||
-                  (typeof modelResult.processingTimeMs === "number" ? `${Math.round(modelResult.processingTimeMs)} ms` : "N/A"),
-              } satisfies ModelResult,
-            ] as const;
-          } catch (error) {
-            return [
-              modelConfig.id,
-              {
-                model: modelConfig.model,
-                response: "",
-                coordinates: null,
-                processingTime: "",
-                error: `Fetch Error: ${error instanceof Error ? error.message : String(error)}`,
-              } satisfies ModelResult,
-            ] as const;
-          }
-        }),
-      );
-
-      settledResults.forEach(([id, modelResult]) => {
-        newResults[id] = modelResult;
-      });
-
-      setResults(newResults);
-    } finally {
-      setIsLoading(false);
-    }
+    await runComparison({
+      imageFile: uploadedImageFile,
+      selectedModels,
+      modelCatalog: ARENA_MODELS,
+    })
   }
 
   return (
@@ -154,7 +60,7 @@ export default function ArenaPage() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleImageUpload}
+                      onChange={handleArenaImageUpload}
                     />
                     <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                     <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
@@ -170,7 +76,7 @@ export default function ArenaPage() {
                         height={300}
                         className="rounded-lg w-full h-auto object-contain"
                       />
-                      <Button variant="outline" size="sm" className="mt-2" onClick={clearImage}>
+                      <Button variant="outline" size="sm" className="mt-2" onClick={handleClearImage}>
                         Clear Image
                       </Button>
                     </div>
@@ -197,8 +103,7 @@ export default function ArenaPage() {
                     </div>
 
                     <Button
-                      onClick={runComparison}
-                      // --- Disable button if no file is selected ---
+                      onClick={runComparisonHandler}
                       disabled={isLoading || selectedModels.length === 0 || !uploadedImageFile}
                       className="w-full bg-emerald-500 hover:bg-emerald-600"
                     >

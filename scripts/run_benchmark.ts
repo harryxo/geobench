@@ -8,6 +8,10 @@ type Part = pkg.Part; // Explicitly type Part
 
 // @ts-ignore - If @types/haversine-distance install fails again, uncomment this. Otherwise, remove it.
 import haversine from 'haversine-distance';
+import { parseModelPredictionFromText } from '../lib/geoguess-response';
+import { createSafetySettings, GEOGUESS_GENERATION_CONFIG, GEOGUESS_PROMPT } from '../lib/geoguess-prompt';
+import { bufferToGenerativePart } from '../lib/geoguess-image';
+import { buildBenchmarkSummary, computeDistanceKm } from '../lib/geoguess-metrics';
 
 // --- Configuration ---
 // Get the directory name in ES module scope
@@ -82,35 +86,11 @@ const generativeModel = vertex_ai.getGenerativeModel({
   model: VERTEX_MODEL_NAME,
 });
 
-const generationConfig = {
-  temperature: 0.4,
-  topK: 32,
-  topP: 1,
-  maxOutputTokens: 4096, // Keep reasonable for JSON output
-};
-
-const safetySettings = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-];
-
-const prompt = `
-  Analyze the provided image and identify the geographic location depicted.
-  Respond ONLY with a valid JSON object containing the following keys:
-  - "latitude": The estimated latitude (float).
-  - "longitude": The estimated longitude (float).
-  - "reasoning": A brief explanation (string).
-  - "confidence": Your confidence level ("High", "Medium", "Low") (string).
-
-  Example: {"latitude": 48.8584, "longitude": 2.2945, "reasoning": "Eiffel Tower.", "confidence": "High"}
-  If unsure, use null for coordinates and explain in reasoning. Ensure the entire output is ONLY the JSON object.
-`;
+const safetySettings = createSafetySettings(HarmCategory, HarmBlockThreshold);
 
 // --- Helper Functions ---
 function imageBufferToGenerativePart(buffer: Buffer, mimeType: string): Part {
-  return { inlineData: { data: buffer.toString("base64"), mimeType } };
+  return bufferToGenerativePart(buffer, mimeType);
 }
 
 // Fetches Street View image and calls Vertex AI
@@ -154,8 +134,8 @@ async function getModelPredictionForPano(
     const imagePart = imageBufferToGenerativePart(imageBuffer, mimeType);
 
     const requestPayload = {
-      contents: [{ role: "user", parts: [{ text: prompt }, imagePart] }],
-      generationConfig,
+      contents: [{ role: "user", parts: [{ text: GEOGUESS_PROMPT }, imagePart] }],
+      generationConfig: GEOGUESS_GENERATION_CONFIG,
       safetySettings,
     };
 
@@ -167,35 +147,16 @@ async function getModelPredictionForPano(
       throw new Error("Received no text content from Vertex AI model.");
     }
 
-    // --- JSON Parsing ---
-    let jsonString = responseText.trim();
-    const jsonRegex = /```(?:json)?\s*({[\s\S]*?})\s*```|({[\s\S]*})/;
-    const match = jsonString.match(jsonRegex);
-    const extractedJson = match ? (match[1] || match[2]) : jsonString;
-
-    if (!extractedJson) {
-       throw new Error(`Could not extract JSON object from model response. Raw output: ${responseText}`);
-    }
-    jsonString = extractedJson.trim();
-
-    if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
-        throw new Error(`Extracted content does not appear to be a valid JSON object. Extracted: ${jsonString}. Raw output: ${responseText}`);
-    }
-
     try {
-      const parsed = JSON.parse(jsonString);
-      if (parsed.latitude === undefined || parsed.longitude === undefined || typeof parsed.reasoning !== 'string' || typeof parsed.confidence !== 'string') {
-         throw new Error(`Incomplete JSON structure: ${jsonString}`);
-      }
-      const lat = parsed.latitude === null ? null : (typeof parsed.latitude === 'number' ? parsed.latitude : parseFloat(parsed.latitude));
-      const lon = parsed.longitude === null ? null : (typeof parsed.longitude === 'number' ? parsed.longitude : parseFloat(parsed.longitude));
-
-      if (parsed.latitude !== null && isNaN(lat)) throw new Error(`Invalid latitude value: ${parsed.latitude}`);
-      if (parsed.longitude !== null && isNaN(lon)) throw new Error(`Invalid longitude value: ${parsed.longitude}`);
-
-      return { latitude: lat, longitude: lon, reasoning: parsed.reasoning, confidence: parsed.confidence };
+      const parsed = parseModelPredictionFromText(responseText);
+      return {
+        latitude: parsed.latitude,
+        longitude: parsed.longitude,
+        reasoning: parsed.reasoning,
+        confidence: parsed.confidence,
+      };
     } catch (parseError: any) {
-      throw new Error(`Failed to parse JSON: ${parseError.message}. Attempted to parse: ${jsonString}. Raw model output: ${responseText}`);
+      throw new Error(`Failed to parse model response: ${parseError.message}`);
     }
   } catch (vertexError: any) {
     console.error(`Error calling Vertex AI for panoId ${panoId}:`, vertexError.message);
@@ -268,7 +229,7 @@ async function runBenchmark() {
     if (prediction.latitude !== null && prediction.longitude !== null && prediction.error === undefined) {
       const trueCoords = { latitude: location.latitude, longitude: location.longitude };
       const predictedCoords = { latitude: prediction.latitude, longitude: prediction.longitude };
-      distanceKm = haversine(trueCoords, predictedCoords) / 1000;
+      distanceKm = computeDistanceKm(haversine(trueCoords, predictedCoords));
       isCorrect = distanceKm <= DISTANCE_THRESHOLD_KM;
     } else if (prediction.error) {
         console.log(` -> Failed: ${prediction.error}`);
@@ -290,44 +251,27 @@ async function runBenchmark() {
 
   // --- Calculate Summary Statistics ---
   const attemptedPredictions = results.length;
-  // Filter out skipped results before calculating stats based on processing
-  const processedResults = results.filter(r => r.predicted.error !== "Skipped: Missing panoId");
-  const validResults = processedResults.filter(r => r.predicted.error === undefined); // Predictions where the script didn't encounter an error
-  const successfulApiResponses = validResults.length; // Got a response, even if null coords
-  const failedApiOrProcessing = processedResults.length - successfulApiResponses;
-
-  // Filter further for results where the model provided coordinates
-  const resultsWithCoords = validResults.filter(r => r.distanceKm !== null);
-  const predictionsWithCoordsCount = resultsWithCoords.length;
-  const correctPredictions = resultsWithCoords.filter(r => r.isCorrect).length;
-
-  const averageDistance = predictionsWithCoordsCount > 0
-    ? resultsWithCoords.reduce((sum, r) => sum + r.distanceKm!, 0) / predictionsWithCoordsCount
-    : null;
-
-  // Accuracy calculations adjusted to consider only processed results
-  const overallAccuracy = processedResults.length > 0
-    ? (correctPredictions / processedResults.length) * 100
-    : 0;
-  const processingAccuracy = successfulApiResponses > 0
-    ? (correctPredictions / successfulApiResponses) * 100
-    : 0;
-  const predictionAccuracy = predictionsWithCoordsCount > 0
-    ? (correctPredictions / predictionsWithCoordsCount) * 100
-    : 0;
+  const summary = buildBenchmarkSummary({
+    totalResults: attemptedPredictions,
+    outcomes: results.map((r) => ({
+      predictedError: r.predicted.error,
+      distanceKm: r.distanceKm,
+      isCorrect: r.isCorrect,
+    })),
+  });
 
   console.log("\n--- Benchmark Summary ---");
   console.log(`Model: ${VERTEX_MODEL_NAME}`);
   console.log(`Total Locations in Dataset: ${attemptedPredictions}`);
-  console.log(`Locations Processed (with PanoID): ${processedResults.length}`);
-  console.log(`Successful API Responses / Processing: ${successfulApiResponses}`);
-  console.log(`Failed API Calls / Processing Errors: ${failedApiOrProcessing}`);
-  console.log(`Predictions with Coordinates Returned: ${predictionsWithCoordsCount}`);
-  console.log(`Correct Predictions (within ${DISTANCE_THRESHOLD_KM}km): ${correctPredictions}`);
-  console.log(`\nAccuracy (Correct / Processed Locations): ${overallAccuracy.toFixed(2)}%`);
-  console.log(`Accuracy (Correct / Successful Responses): ${processingAccuracy.toFixed(2)}%`);
-  console.log(`Accuracy (Correct / Predictions with Coords): ${predictionAccuracy.toFixed(2)}%`);
-  console.log(`Average Distance (for predictions with coords): ${averageDistance !== null ? averageDistance.toFixed(2) + ' km' : 'N/A'}`);
+  console.log(`Locations Processed (with PanoID): ${summary.processedCount}`);
+  console.log(`Successful API Responses / Processing: ${summary.successfulCount}`);
+  console.log(`Failed API Calls / Processing Errors: ${summary.failedCount}`);
+  console.log(`Predictions with Coordinates Returned: ${summary.withCoordsCount}`);
+  console.log(`Correct Predictions (within ${DISTANCE_THRESHOLD_KM}km): ${summary.correctCount}`);
+  console.log(`\nAccuracy (Correct / Processed Locations): ${summary.overallAccuracy.toFixed(2)}%`);
+  console.log(`Accuracy (Correct / Successful Responses): ${summary.processingAccuracy.toFixed(2)}%`);
+  console.log(`Accuracy (Correct / Predictions with Coords): ${summary.predictionAccuracy.toFixed(2)}%`);
+  console.log(`Average Distance (for predictions with coords): ${summary.averageDistanceKm !== null ? summary.averageDistanceKm.toFixed(2) + ' km' : 'N/A'}`);
 
   // --- Save Detailed Results ---
   try {
