@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import L from "leaflet"
+import type { LeafletMouseEvent } from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 interface MapComponentProps {
@@ -34,7 +35,7 @@ export default function MapComponent({
       }).addTo(mapRef.current)
 
       // Add click handler
-      mapRef.current.on("click", (e) => {
+      mapRef.current.on("click", (e: LeafletMouseEvent) => {
         onMapClick(e.latlng.lat, e.latlng.lng)
       })
     }

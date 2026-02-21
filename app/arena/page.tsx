@@ -9,41 +9,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, MapPin, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Navbar from "@/components/navbar"
+import { ARENA_MODELS, DEFAULT_SELECTED_MODEL_IDS } from "@/lib/arena-config"
 
 // Define a type for the result, including potential errors
 type ModelResult = {
   model: string;
-  response: string; // Reasoning from the model
-  // confidence: string; // Removed
+  response: string;
   coordinates: { lat: number; lng: number } | null;
-  // accuracy: string; // Removed placeholder
-  processingTime: string; // Placeholder
-  error?: string; // Optional error message
+  processingTime: string;
+  error?: string;
 };
-
-
-// Sample model data - Update Gemini entry for Vertex AI
-const models = [
-  { id: "gpt4o", name: "GPT-4o", color: "#10a37f" },
-  { id: "claude", name: "Claude 3 Opus", color: "#7c3aed" },
-  // --- Update ID and Name for Vertex Gemini ---
-  { id: "vertex-gemini", name: "Vertex Gemini 2.5 Pro", color: "#4285F4" }, // Example Google Blue
-  { id: "llava", name: "LLaVA-1.5", color: "#f97316" },
-]
 
 export default function ArenaPage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  // --- Add state for the File object ---
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false)
-  // --- Update state type to use ModelResult ---
   const [results, setResults] = useState<Record<string, ModelResult>>({})
-  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt4o", "claude", "gemini"]) // Include gemini by default maybe
+  const [selectedModels, setSelectedModels] = useState<string[]>(DEFAULT_SELECTED_MODEL_IDS)
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // --- Store the file object ---
       setUploadedImageFile(file);
       const reader = new FileReader()
       reader.onload = (event) => {
@@ -56,7 +42,6 @@ export default function ArenaPage() {
 
   const clearImage = () => {
     setUploadedImage(null)
-    // --- Clear the file object too ---
     setUploadedImageFile(null);
     setResults({})
   }
@@ -65,103 +50,83 @@ export default function ArenaPage() {
     setSelectedModels((prev) => (prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]))
   }
 
-  // --- Make the function async ---
   const runComparison = async () => {
-    // --- Check for the file object ---
     if (!uploadedImageFile || selectedModels.length === 0) return
 
     setIsLoading(true)
-    // --- Use the ModelResult type ---
     const newResults: Record<string, ModelResult> = {}
+    try {
+      const selectedModelConfigs = ARENA_MODELS.filter((model) => selectedModels.includes(model.id));
 
-    // --- Process selected models ---
-    // Use Promise.all to run API calls concurrently in the future if needed
-    // For now, handle Gemini specifically
+      const settledResults = await Promise.all(
+        selectedModelConfigs.map(async (modelConfig) => {
+          const formData = new FormData();
+          formData.append("image", uploadedImageFile);
+          formData.append("provider", modelConfig.provider);
+          formData.append("model", modelConfig.model);
 
-    // --- Update the ID to match the models array ---
-    const geminiModelId = "vertex-gemini";
-
-    if (selectedModels.includes(geminiModelId)) {
-      const formData = new FormData();
-      formData.append("image", uploadedImageFile);
-      // Optional: formData.append("modelId", geminiModelId);
-
-      try {
-        const response = await fetch('/api/geoguess', { // Call your API route
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          let errorMsg = `API Error: ${response.statusText}`;
           try {
-            const errorData = await response.json();
-            errorMsg = `API Error: ${errorData.error || response.statusText}`;
-          } catch (e) { /* Ignore if response is not JSON */ }
-          console.error("API Error for Gemini:", errorMsg);
-          newResults[geminiModelId] = { // Store error state
-              model: geminiModelId,
-              response: "", coordinates: null, processingTime: "", // Default values (accuracy & confidence removed)
-              error: errorMsg
-          };
-        } else {
-          const modelResult = await response.json();
-          // Store successful result, ensure structure matches ModelResult
-           newResults[geminiModelId] = {
-             model: modelResult.model || geminiModelId, // Use model from response or fallback
-             response: modelResult.response, // Reasoning
-             // confidence: modelResult.confidence || "N/A", // Removed
-             coordinates: modelResult.coordinates,
-             // accuracy: modelResult.accuracy || "N/A", // Removed
-             processingTime: modelResult.processingTime || "N/A",
-          };
-        }
-      } catch (error) {
-        console.error("Fetch Error for Gemini:", error);
-         const errorMsg = `Fetch Error: ${error instanceof Error ? error.message : String(error)}`;
-         newResults[geminiModelId] = { // Store fetch error state
-            model: geminiModelId,
-            response: "", coordinates: null, processingTime: "", // Default values (accuracy & confidence removed)
-            error: errorMsg
-         };
-      }
-    }
+            const response = await fetch("/api/geoguess", {
+              method: "POST",
+              body: formData,
+            });
 
-    // --- Handle Other Models (Keep Dummy Data for now) ---
-    if (selectedModels.includes("gpt4o") && !newResults["gpt4o"]) {
-      newResults["gpt4o"] = {
-        model: "gpt4o",
-        response: "This appears to be a view of the Wilder sports-field complex in Orinda, California, just east of the Caldecott Tunnel...",
-        // confidence: "High", // Removed
-        coordinates: { lat: 37.88, lng: -122.21 },
-        // accuracy: "N/A", // Removed
-        processingTime: "Simulated"
-      };
-    }
-    if (selectedModels.includes("claude") && !newResults["claude"]) {
-       newResults["claude"] = {
-        model: "claude",
-        response: "This is the Wilder Fields sports complex in Orinda, California. The image shows multiple soccer/sports fields...",
-        // confidence: "High", // Removed
-        coordinates: { lat: 37.88, lng: -122.21 },
-        // accuracy: "N/A", // Removed
-        processingTime: "Simulated"
-      };
-    }
-     if (selectedModels.includes("llava") && !newResults["llava"]) {
-       newResults["llava"] = {
-        model: "llava",
-        response: "The image shows a hillside view overlooking what appears to be a sports complex with several green fields...",
-        // confidence: "Medium", // Removed
-        coordinates: { lat: 37.5, lng: -122 }, // Approx dummy
-        // accuracy: "N/A", // Removed
-        processingTime: "Simulated"
-      };
-    }
-    // Add other dummy models if needed...
+            if (!response.ok) {
+              let errorMsg = `API Error: ${response.statusText}`;
+              try {
+                const errorData = await response.json();
+                errorMsg = `API Error: ${errorData.error || response.statusText}`;
+              } catch {
+                // Keep fallback status text
+              }
 
-    setResults(newResults);
-    setIsLoading(false);
+              return [
+                modelConfig.id,
+                {
+                  model: modelConfig.model,
+                  response: "",
+                  coordinates: null,
+                  processingTime: "",
+                  error: errorMsg,
+                } satisfies ModelResult,
+              ] as const;
+            }
+
+            const modelResult = await response.json();
+            return [
+              modelConfig.id,
+              {
+                model: modelResult.model || modelConfig.model,
+                response: modelResult.response || "",
+                coordinates: modelResult.coordinates ?? null,
+                processingTime:
+                  modelResult.processingTime ||
+                  (typeof modelResult.processingTimeMs === "number" ? `${Math.round(modelResult.processingTimeMs)} ms` : "N/A"),
+              } satisfies ModelResult,
+            ] as const;
+          } catch (error) {
+            return [
+              modelConfig.id,
+              {
+                model: modelConfig.model,
+                response: "",
+                coordinates: null,
+                processingTime: "",
+                error: `Fetch Error: ${error instanceof Error ? error.message : String(error)}`,
+              } satisfies ModelResult,
+            ] as const;
+          }
+        }),
+      );
+
+      settledResults.forEach(([id, modelResult]) => {
+        newResults[id] = modelResult;
+      });
+
+      setResults(newResults);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -213,7 +178,7 @@ export default function ArenaPage() {
                     <div className="space-y-3">
                       <h3 className="font-medium">Select Models to Compare</h3>
                       <div className="flex flex-wrap gap-2">
-                        {models.map((model) => (
+                        {ARENA_MODELS.map((model) => (
                           <Button
                             key={model.id}
                             variant={selectedModels.includes(model.id) ? "default" : "outline"}
@@ -281,7 +246,7 @@ export default function ArenaPage() {
                     <TabsList className="mb-4 flex flex-wrap">
                       {/* Filter results to only show tabs for models that were actually selected for the run */}
                       {selectedModels.filter(id => results[id]).map((modelId) => {
-                        const model = models.find((m) => m.id === modelId)
+                        const model = ARENA_MODELS.find((m) => m.id === modelId)
                         return (
                           <TabsTrigger
                             key={modelId}
@@ -305,7 +270,7 @@ export default function ArenaPage() {
                         {/* --- Check for error property --- */}
                         {resultData.error ? (
                           <div className="text-red-600">
-                            <h3 className="font-medium mb-2">{models.find((m) => m.id === modelId)?.name} Error</h3>
+                            <h3 className="font-medium mb-2">{ARENA_MODELS.find((m) => m.id === modelId)?.name} Error</h3>
                             <p>{resultData.error}</p>
                           </div>
                         ) : (
@@ -314,19 +279,17 @@ export default function ArenaPage() {
                             <div className="flex items-center">
                               <div
                                 className="w-3 h-3 rounded-full mr-2"
-                                style={{ backgroundColor: models.find((m) => m.id === modelId)?.color }}
+                                style={{ backgroundColor: ARENA_MODELS.find((m) => m.id === modelId)?.color }}
                               ></div>
-                              <h3 className="font-medium">{models.find((m) => m.id === modelId)?.name}</h3>
+                              <h3 className="font-medium">{ARENA_MODELS.find((m) => m.id === modelId)?.name}</h3>
                             </div>
                             <p className="text-gray-700 whitespace-pre-line">{resultData.response}</p>
-                            {/* Optionally display coordinates, confidence etc. */}
                             {resultData.coordinates && (
                                 <p className="text-sm text-gray-500">
                                     Coords: {resultData.coordinates.lat.toFixed(4)}, {resultData.coordinates.lng.toFixed(4)}
                                 </p>
                             )}
-                             {/* Confidence display removed */}
-                             {/* You can add accuracy/processing time here too if available */}
+                            <p className="text-sm text-gray-500">Processing time: {resultData.processingTime}</p>
                           </div>
                         )}
                       </TabsContent>

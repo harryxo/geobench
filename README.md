@@ -1,45 +1,100 @@
-# GeoGuesser AI Benchmark 
+# GeoGuesser AI Benchmark
 
-This project aims to evaluate and compare the capabilities of various multimodal AI models in identifying geographic locations from images, inspired by the popular game GeoGuessr. It provides both a benchmarking script for systematic evaluation 
-and a web interface for visualizing results and performing interactive comparisons.                                                                                                                                                                  
-                                                                                                                                                                                                                                                     
-## Goals                                                                                                                                                                                                                                             
-                                                                                                                                                                                                                                                     
-*   **Objective Comparison:** Provide a standardized platform to benchmark leading multimodal AI models (like Google's Gemini, OpenAI's GPT-4o, Anthropic's Claude, etc.) on their GeoGuessr abilities.                                              
-*   **Standardized Dataset:** Utilize a defined set of locations with specific Street View panorama IDs (`panoId`) for consistent image inputs across benchmarks.                                                                                    
-*   **Key Metrics:** Evaluate models based on:                                                                                                                                                                                                       
-    *   **Geographic Accuracy:** Distance between the model's predicted coordinates and the ground truth.                                                                                                                                            
-    *   **Reasoning Quality:** Assessing the model's explanation for its prediction.                                                                                                                                                                 
-    *   **Confidence Calibration:** Comparing the model's stated confidence with its actual accuracy (future goal).                                                                                                                                  
-*   **Web Interface:** Offer a user-friendly way to:                                                                                                                                                                                                 
-    *   View overall model rankings on a **Leaderboard**.                                                                                                                                                                                            
-    *   Compare model outputs side-by-side for a user-uploaded image in the **Arena**.                                                                                                                                                               
-    *   (Future) Provide an interactive **Playground** for users to test models.                                                                                                                                                                     
-*   **Track Progress:** Monitor the evolution of multimodal AI capabilities in geographic understanding over time.                                                                                                                                   
-                                                                                                                                                                                                                                                     
-## Features                                                                                                                                                                                                                                          
-                                                                                                                                                                                                                                                     
-*   **Benchmark Script (`scripts/run_benchmark.ts`):**                                                                                                                                                                                               
-    *   Loads location data from `benchmark_data/locations.json`.                                                                                                                                                                                    
-    *   Fetches corresponding images using the Google Street View Image API via `panoId`.                                                                                                                                                            
-    *   Sends images and a structured prompt to the configured AI model (currently Vertex AI Gemini).                                                                                                                                                
-    *   Parses the model's JSON response (latitude, longitude, reasoning, confidence).                                                                                                                                                               
-    *   Calculates the distance error (using haversine distance) and accuracy (based on a 100km threshold).                                                                                                                                          
-    *   Saves detailed results to `benchmark_results.json`.                                                                                                                                                                                          
-    *   Outputs a summary to the console.                                                                                                                                                                                                            
-*   **Web Application (Next.js):**                                                                                                                                                                                                                   
-    *   **`/leaderboard`:** Displays benchmark results loaded from `benchmark_results.json`, ranking models based on accuracy and average distance. Includes tabs for overall, accuracy, and distance rankings.                                      
-    *   **`/arena`:** Allows users to upload an image, select models, and see their location predictions side-by-side. Currently integrates with Vertex AI Gemini via the `/api/geoguess` route; other models are simulated placeholders.            
-    *   **`/about`:** Provides information about the project and methodology.                                                                                                                                                                        
-    *   **`/api/geoguess`:** Backend API route used by the Arena to process image uploads and interact with the Vertex AI Gemini model.                                                                                                              
-*   **Configuration:** Uses environment variables (`.env.local`) for API keys and project settings.                                                                                                                                                  
-                                                                                                                                                                                                                                                     
-## Technology Stack                                                                                                                                                                                                                                  
-                                                                                                                                                                                                                                                     
-*   **Framework:** Next.js 15                                                                                                                                                                                                                        
-*   **Language:** TypeScript                                                                                                                                                                                                                         
-*   **Styling:** Tailwind CSS with Shadcn/ui components                                                                                                                                                                                              
-*   **AI Model Integration:** Google Cloud Vertex AI SDK (`@google-cloud/vertexai`) for Gemini models.                                                                                                                                               
-*   **Mapping/Images:** Google Maps Street View Image API                                                                                                                                                                                            
-*   **Package Manager:** pnpm                                                                                                                                                                                                                        
-*   **UI Components:** Radix UI (via Shadcn), Recharts, Leaflet (planned/used in components), Embla Carousel, Sonner (toasts), Vaul (drawers). 
+Benchmark multimodal models on GeoGuessr-style location guessing from images.
+
+This repository includes:
+
+- A benchmark script that evaluates model predictions against a fixed location dataset
+- A Next.js web app with leaderboard and arena views
+- Provider-based inference with OpenRouter (default) and Vertex AI fallback
+
+## Project Status
+
+- **Production path:** Arena API route with selectable provider/model (OpenRouter or Vertex)
+- **Partially implemented:** leaderboard aggregation from local benchmark results
+- **Demo placeholders:** benchmark playground page behavior
+
+## Features
+
+- **Benchmark script (`scripts/run_benchmark.ts`)**
+  - Loads benchmark locations from `benchmark_data/locations.json`
+  - Fetches Street View images by `panoId`
+  - Calls Gemini on Vertex AI with structured prompts
+  - Calculates distance error and threshold accuracy
+  - Writes results to `benchmark_results.json`
+
+- **Web app (Next.js)**
+  - `app/leaderboard/page.tsx`: model ranking UI
+  - `app/arena/page.tsx`: upload image and compare model outputs
+  - `app/api/geoguess/route.ts`: provider-agnostic inference route for Arena
+
+## Quick Start
+
+### 1) Install
+
+```bash
+pnpm install
+```
+
+### 2) Configure environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in required values in `.env.local`.
+
+### 3) Run the app
+
+```bash
+pnpm dev
+```
+
+### 4) Run tests
+
+```bash
+pnpm test
+```
+
+### 5) Type check
+
+```bash
+pnpm exec tsc --noEmit
+```
+
+## Environment Variables
+
+Required for benchmark:
+
+- `GOOGLE_MAPS_API_KEY`
+
+Recommended for Arena/API (default path):
+
+- `GEOGUESS_DEFAULT_PROVIDER` (`openrouter` or `vertex`)
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL` (optional override)
+
+Required for Vertex provider:
+
+- `GCP_PROJECT_ID`
+- `VERTEXAI_LOCATION`
+- `GOOGLE_APPLICATION_CREDENTIALS` (local file path)
+
+Optional (for hosted environments like Vercel):
+
+- `GCP_SERVICE_ACCOUNT_EMAIL`
+- `GCP_PRIVATE_KEY`
+
+See `.env.example` for a template.
+
+## Open Source
+
+- License: MIT (`LICENSE`)
+- Contributing guide: `CONTRIBUTING.md`
+- Code of Conduct: `CODE_OF_CONDUCT.md`
+- Security policy: `SECURITY.md`
+
+## Development Notes
+
+- Benchmark outputs in `benchmark_results.json` are generated artifacts.
+- Do not commit secrets in `.env`, `.env.local`, or key files.
